@@ -20,8 +20,10 @@ class ViewController: UIViewController {
     var mcBrowserViewController: MCBrowserViewController?
     var mcBrowser: MCNearbyServiceBrowser!
     let mcServiceType = "kaito-uwb"
+    let centralDevice = "iPhone11"
+    let periferalDevice = "iPhone12"
     lazy var mcPeerID: MCPeerID = {
-        return MCPeerID(displayName: "MyDevice-11")
+        return MCPeerID(displayName: centralDevice)
     }()
     struct PeerState {
         var isConnected: Bool
@@ -220,7 +222,7 @@ extension ViewController: MCSessionDelegate {
 extension ViewController: MCNearbyServiceBrowserDelegate {
     func browser(_ browser: MCNearbyServiceBrowser, foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
         // Check the displayName of peer if you want to connect with specific peer
-        if peerID.displayName == "MyDevice-12" {
+        if peerID.displayName == periferalDevice {
             if let mcSessionUnwrapped = mcSession {
                 browser.invitePeer(peerID, to: mcSessionUnwrapped, withContext: nil, timeout: 10)
             } else {
