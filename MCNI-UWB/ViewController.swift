@@ -20,8 +20,8 @@ class ViewController: UIViewController {
     var mcBrowserViewController: MCBrowserViewController?
     var mcBrowser: MCNearbyServiceBrowser!
     let mcServiceType = "kaito-uwb"
-    let centralDevice = "iPhone11"
-    let periferalDevice = "iPhone12"
+    let centralDevice = "iPhone12"
+    let periferalDevice = "iPhone11"
     lazy var mcPeerID: MCPeerID = {
         return MCPeerID(displayName: centralDevice)
     }()
@@ -39,6 +39,11 @@ class ViewController: UIViewController {
     // MARK: IBOutlet instances
 
     @IBOutlet weak var connectedDeviceNameLabel: UILabel!
+    
+    @IBOutlet weak var mcStatusLabel: UILabel!
+    
+
+    // MARK: Main
     override func viewDidLoad() {
         super.viewDidLoad()
     }
@@ -94,7 +99,6 @@ extension ViewController: NISessionDelegate {
         print("NISession updated with nearby objects: \(nearbyObjects)")
         for accessory in nearbyObjects {
                 var stringData = ""
-                
             guard let peerID = niSessions.first(where: { $1 == session })?.key else {
                 return
             }
@@ -140,6 +144,18 @@ extension ViewController: MCNearbyServiceAdvertiserDelegate {
 extension ViewController: MCSessionDelegate {
     func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         print("MCSession state changed to: \(state) for peer: \(peerID)")
+        DispatchQueue.main.async { [weak self] in
+            switch state {
+            case .connected:
+                self?.mcStatusLabel.text = "Connected"
+            case .connecting:
+                self?.mcStatusLabel.text = "Connecting"
+            case .notConnected:
+                self?.mcStatusLabel.text = "Not Connected"
+            @unknown default:
+                self?.mcStatusLabel.text = "Unknown State"
+            }
+        }
         switch state {
         case .connected:
             setupNearbyInteraction(for: peerID)
@@ -155,6 +171,9 @@ extension ViewController: MCSessionDelegate {
             DispatchQueue.main.async {
                 self.mcBrowserViewController?.dismiss(animated: true, completion: nil)
                 self.connectedDeviceNameLabel.text = peerID.displayName
+//                self.mcStatusLabel.text = "\(state)"
+                
+
             }
         case .notConnected:
             // The peer has disconnected or connection failed to establish.
@@ -162,16 +181,16 @@ extension ViewController: MCSessionDelegate {
             DispatchQueue.global(qos: .background).async {
                 self.attemptReconnectTo(peerID: peerID)
             }
+//            DispatchQueue.main.async {
+//                self.mcStatusLabel.text = "\(state)"
+//            }
         default:
             print("MCSession state is \(state)")
         }
     }
     // MARK: LoopMCSession
     func attemptReconnectTo(peerID: MCPeerID) {
-        //max処理
-//        var retryCount = 0
-//        let maxRetries = 10
-        
+
         mcAdvertiser?.startAdvertisingPeer()
         
         Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { timer in
