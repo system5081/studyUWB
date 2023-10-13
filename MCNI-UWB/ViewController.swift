@@ -2,7 +2,6 @@
 //  ViewController.swift
 //  MCNI-UWB
 //
-//  Created by 中村海斗 on 2023/10/12.
 //
 
 import UIKit
@@ -12,7 +11,8 @@ import NearbyInteraction
 class ViewController: UIViewController {
     // MARK: NI variables
     var niSessions:[MCPeerID:NISession]=[:]
-    var myTokenData:Data?
+    var myTokenData:[MCPeerID:Data]=[:]
+    //var myTokenData:Data?
     
     //MARK: MC variables
     var mcSession:MCSession?
@@ -22,6 +22,7 @@ class ViewController: UIViewController {
     let mcServiceType = "kaito-uwb"
     let centralDevice = "iPhone12"
     let periferalDevice = "iPhone11"
+//    let periferalDevice2 = ""
     lazy var mcPeerID: MCPeerID = {
         return MCPeerID(displayName: centralDevice)
     }()
@@ -72,7 +73,13 @@ class ViewController: UIViewController {
         guard let token = newSession.discoveryToken else {
             return
         }
-        myTokenData = try! NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true)
+        do {
+            let tokenData = try NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true)
+            myTokenData[peerID] = tokenData  // トークンをピアごとに保持
+        } catch {
+            print("Failed to archive token data: \(error)")
+        }
+//        myTokenData = try! NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true)
     }
     
     func setupMultipeerConnectivity() {
@@ -160,13 +167,22 @@ extension ViewController: MCSessionDelegate {
         case .connected:
             setupNearbyInteraction(for: peerID)
             connectedPeers[peerID] = PeerState(isConnected: true, lastReceivedData: nil, latency: nil)
-            
-            do {
-                try session.send(myTokenData!, toPeers: session.connectedPeers, with: .reliable)
-
-            } catch {
-                print(error.localizedDescription)
+    
+            if let dataToSend = myTokenData[peerID] {
+                do {
+                    try session.send(dataToSend, toPeers: [peerID], with: .reliable)
+                } catch {
+                    print("Failed to send data: \(error.localizedDescription)")
+                }
+            } else {
+                print("No token data available for peer: \(peerID)")
             }
+//            do {
+//                try session.send(myTokenData!, toPeers: session.connectedPeers, with: .reliable)
+//
+//            } catch {
+//                print(error.localizedDescription)
+//            }
             
             DispatchQueue.main.async {
                 self.mcBrowserViewController?.dismiss(animated: true, completion: nil)
@@ -248,6 +264,13 @@ extension ViewController: MCNearbyServiceBrowserDelegate {
                 print("mcSessionはnilです")
             }
         }
+//        if peerID.displayName == periferalDevice2 {
+//            if let mcSessionUnwrapped = mcSession {
+//                browser.invitePeer(peerID, to: mcSessionUnwrapped, withContext: nil, timeout: 10)
+//            } else {
+//                print("mcSessionはnilです")
+//            }
+//        }
     }
     
     func browser(_ browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
